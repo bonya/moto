@@ -103,6 +103,10 @@ class TaskDefinition(BaseObject):
             self.volumes = volumes
 
     @property
+    def physical_resource_id(self):
+        return self.arn
+
+    @property
     def response_object(self):
         response_object = self.gen_response_object()
         response_object['taskDefinitionArn'] = response_object['arn']

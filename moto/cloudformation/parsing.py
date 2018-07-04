@@ -65,6 +65,7 @@ MODEL_MAP = {
     "AWS::ElasticLoadBalancingV2::LoadBalancer": elbv2_models.FakeLoadBalancer,
     "AWS::ElasticLoadBalancingV2::TargetGroup": elbv2_models.FakeTargetGroup,
     "AWS::ElasticLoadBalancingV2::Listener": elbv2_models.FakeListener,
+    "AWS::ElasticLoadBalancingV2::ListenerRule": elbv2_models.FakeRule,
     "AWS::DataPipeline::Pipeline": datapipeline_models.Pipeline,
     "AWS::IAM::InstanceProfile": iam_models.InstanceProfile,
     "AWS::IAM::Role": iam_models.Role,
@@ -233,6 +234,7 @@ def resource_name_property_from_type(resource_type):
 def parse_resource(logical_id, resource_json, resources_map):
     resource_type = resource_json['Type']
     resource_class = resource_class_from_type(resource_type)
+
     if not resource_class:
         warnings.warn(
             "Tried to parse {0} but it's not supported by moto's CloudFormation implementation".format(resource_type))
@@ -264,6 +266,7 @@ def parse_and_create_resource(logical_id, resource_json, resources_map, region_n
 
     resource_type = resource_json['Type']
     resource_tuple = parse_resource(logical_id, resource_json, resources_map)
+
     if not resource_tuple:
         return None
     resource_class, resource_json, resource_name = resource_tuple

@@ -269,6 +269,7 @@ class ELBV2Response(BaseResponse):
 
         if len(all_rules) > start + page_size:
             next_marker = rules_resp[-1].arn
+
         template = self.response_template(DESCRIBE_RULES_TEMPLATE)
         return template.render(rules=rules_resp, marker=next_marker)
 
@@ -863,9 +864,9 @@ DESCRIBE_RULES_TEMPLATE = """<DescribeRulesResponse xmlns="http://elasticloadbal
         <Conditions>
           {% for condition in rule.conditions %}
           <member>
-            <Field>{{ condition["field"] }}</Field>
+            <Field>{{ condition["Field"] }}</Field>
             <Values>
-              {% for value in condition["values"] %}
+              {% for value in condition["Values"] %}
               <member>{{ value }}</member>
               {% endfor %}
             </Values>

@@ -118,6 +118,14 @@ class FakeTargetGroup(BaseModel):
             raise InvalidTargetError()
         return FakeHealthStatus(t['id'], t['port'], self.healthcheck_port, 'healthy')
 
+    def get_cfn_attribute(self, attribute_name):
+        if attribute_name == 'LoadBalancerArns':
+            return self.load_balancer_arns
+        if attribute_name == 'TargetGroupFullName':
+            return self.arn.split(':')[-1]
+        if attribute_name == 'TargetGroupName':
+            return self.name
+
     @classmethod
     def create_from_cloudformation_json(cls, resource_name, cloudformation_json, region_name):
         properties = cloudformation_json['Properties']
@@ -226,6 +234,30 @@ class FakeRule(BaseModel):
         self.priority = priority  # int or 'default'
         self.actions = actions
         self.is_default = is_default
+
+    @property
+    def physical_resource_id(self):
+        return self.arn
+
+    def delete(self, region):
+        ''' Not exposed as part of the ELB API - used for CloudFormation. '''
+        elbv2_backends[region].delete_rule(self.arn)
+
+    @classmethod
+    def create_from_cloudformation_json(cls, resource_name, cloudformation_json, region_name):
+        properties = cloudformation_json['Properties']
+
+        elbv2_backend = elbv2_backends[region_name]
+
+        actions = properties.get('Actions')
+        conditions = properties.get('Conditions')
+        listener_arn = properties.get('ListenerArn')
+        priority = properties.get('Priority')
+
+        rule = elbv2_backend.create_rule(
+            listener_arn, conditions, priority, actions)[0]
+
+        return rule
 
 
 class FakeBackend(BaseModel):
@@ -395,11 +427,11 @@ class ELBv2Backend(BaseBackend):
 
         # validate conditions
         for condition in conditions:
-            field = condition['field']
+            field = condition.get('Field', condition.get('field', None))
             if field not in ['path-pattern', 'host-header']:
                 raise InvalidConditionFieldError(field)
 
-            values = condition['values']
+            values = condition.get('Values', condition.get('values', None))
             if len(values) == 0:
                 raise InvalidConditionValueError('A condition value must be specified')
             if len(values) > 1:
@@ -419,10 +451,10 @@ class ELBv2Backend(BaseBackend):
         target_group_arns = [target_group.arn for target_group in self.target_groups.values()]
         for i, action in enumerate(actions):
             index = i + 1
-            action_type = action['type']
+            action_type = action.get('Type', action.get('type', None))
             if action_type not in ['forward']:
                 raise InvalidActionTypeError(action_type, index)
-            action_target_group_arn = action['target_group_arn']
+            action_target_group_arn = action.get('TargetGroupArn', action.get('target_group_arn', None))
             if action_target_group_arn not in target_group_arns:
                 raise ActionTargetGroupNotFoundError(action_target_group_arn)
 
